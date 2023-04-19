@@ -1,7 +1,6 @@
 package com.go.tokenverification.service;
 
-import com.go.tokenverification.configure.CustomUserDetails;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.go.tokenverification.model.security.User;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -15,21 +14,24 @@ import org.springframework.stereotype.Service;
 @Service
 public class AuthenticationProviderService implements AuthenticationProvider {
 
-    @Autowired
-    private UserService customUserDetailsService;
+    private final UserService userService;
 
-    @Autowired
-    private BCryptPasswordEncoder bCryptPasswordEncoder;
+    private final BCryptPasswordEncoder bCryptPasswordEncoder;
 
-    @Autowired
-    private SCryptPasswordEncoder sCryptPasswordEncoder;
+    private final SCryptPasswordEncoder sCryptPasswordEncoder;
+
+    public AuthenticationProviderService(UserService userService, BCryptPasswordEncoder bCryptPasswordEncoder, SCryptPasswordEncoder sCryptPasswordEncoder) {
+        this.userService = userService;
+        this.bCryptPasswordEncoder = bCryptPasswordEncoder;
+        this.sCryptPasswordEncoder = sCryptPasswordEncoder;
+    }
 
     @Override
     public Authentication authenticate(Authentication authentication) throws AuthenticationException {
         String username = authentication.getName();
         String password = authentication.getCredentials().toString();
 
-        CustomUserDetails user = customUserDetailsService.loadUserByUsername(username);
+        User user = userService.loadUserByUsername(username);
         switch (user.getUser().getEncryptionAlgorithm()){
             case BCRYPT:
                 return checkPassword(user,password, bCryptPasswordEncoder);
@@ -40,7 +42,7 @@ public class AuthenticationProviderService implements AuthenticationProvider {
         throw new BadCredentialsException("Bad credentials ");
     }
 
-    private Authentication checkPassword(CustomUserDetails user , String rawPassword , PasswordEncoder passwordEncoder){
+    private Authentication checkPassword(User user , String rawPassword , PasswordEncoder passwordEncoder){
         if (passwordEncoder.matches(rawPassword, user.getPassword())) {
             return new UsernamePasswordAuthenticationToken(user.getUsername(), user.getPassword(), user.getAuthorities());
         } else {

@@ -5,23 +5,27 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 
-import javax.persistence.Column;
-import javax.persistence.Embeddable;
+import javax.persistence.*;
 import java.time.LocalDateTime;
 
-@Embeddable
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-
 @Accessors(chain = true)
+@Entity
+@Table(name = "EMAIL_CONFIRMATION_TOKEN")
 public class EmailConfirmationTokenEntity {
-    @Column(name="EMAIL_CONFIRMATION_TOKEN")
-    private String emailConfirmationToken;
 
-    @Column(name="EMAIL_CONFIRMATION_TOKEN_GENERATION_TIME")
-    private LocalDateTime emailConfirmationTokenGeneratedAt;
+    @Id
+    @GeneratedValue
+    @Column(name = "EMAIL_CONFIRMATION_TOKEN_ID")
+    private Long id;
 
-    @Column(name="EMAIL_CONFIRMATION_EXPIRE")
-    private LocalDateTime emailConfirmationExpire;
+    @Column(name="TOKEN",columnDefinition = "TEXT")
+    private String token;
+
+    @ManyToOne
+    @JoinColumn(name = "USER_ID",nullable = false)
+    private UserEntity user;
+
 }

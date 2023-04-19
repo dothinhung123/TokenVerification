@@ -1,24 +1,25 @@
 package com.go.tokenverification.service;
 
-import com.go.tokenverification.configure.CustomUserDetails;
 import com.go.tokenverification.entity.EmailConfirmationTokenEntity;
 import com.go.tokenverification.entity.UserEntity;
 import com.go.tokenverification.exception.InvalidDataException;
-import com.go.tokenverification.model.response.AcknowledgeResponse;
+import com.go.tokenverification.jwt.JwtTokenService;
+import com.go.tokenverification.model.security.User;
+import com.go.tokenverification.repository.EmailConfirmationTokenRepository;
 import com.go.tokenverification.repository.UserRepository;
 import com.go.tokenverification.utils.EmailValidationUtils;
-import net.bytebuddy.utility.RandomString;
+import com.nimbusds.jose.JOSEException;
 import org.apache.logging.log4j.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.time.LocalDateTime;
 
 @Service
 @Transactional
@@ -28,27 +29,29 @@ public class UserService implements UserDetailsService {
 
     private final EmailService emailService;
 
-    @Autowired
-    private BCryptPasswordEncoder bCryptPasswordEncoder;
+    private final BCryptPasswordEncoder bCryptPasswordEncoder;
 
-    @Value("${mail.expire.hours}")
-    private String hours;
+    private final JwtTokenService jwtTokenService;
+
+    @Value("${email.token.expire.minutes}")
+    private String emailTokenExpire;
 
 
-    public UserService(UserRepository userRepository, EmailService emailService) {
+    public UserService(UserRepository userRepository, EmailService emailService, EmailConfirmationTokenRepository emailConfirmationTokenRepository, BCryptPasswordEncoder bCryptPasswordEncoder, JwtTokenService jwtTokenService) {
         this.userRepository = userRepository;
         this.emailService = emailService;
+//        this.emailConfirmationTokenRepository = emailConfirmationTokenRepository;
+        this.bCryptPasswordEncoder = bCryptPasswordEncoder;
+        this.jwtTokenService = jwtTokenService;
     }
 
     @Override
-    public CustomUserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        UserEntity user = userRepository.findUserEntityByUsername(username)
-                .orElseThrow(()-> new UsernameNotFoundException("Username is not existing in the system"));
-
-        return new CustomUserDetails(user);
+    public User loadUserByUsername(String username) throws UsernameNotFoundException {
+        UserEntity user = findActiveUserByUsername(username);
+        return new User(user);
     }
 
-    public void addUser(UserEntity user) throws InvalidDataException {
+    public void addUser(UserEntity user) throws InvalidDataException, JOSEException {
         //verify email
         if(user==null || Strings.isEmpty(user.getUsername()) || Strings.isEmpty(user.getPassword())
         || !EmailValidationUtils.validateEmail(user.getUsername())){
@@ -58,14 +61,18 @@ public class UserService implements UserDetailsService {
         if(isUserExist(user)){
             throw new InvalidDataException("User have already existed");
         }
-        //send email
-        String token = RandomString.make(64);
-        EmailConfirmationTokenEntity emailConfirmationToken = sendEmail(user, token);
 
-        //save
-        user.setEmailConfirmationTokenEntity(emailConfirmationToken);
+        //save user
         user.setPassword(bCryptPasswordEncoder.encode(user.getPassword()));
         userRepository.save(user);
+
+        //send email
+        Authentication authentication = new UsernamePasswordAuthenticationToken(user.getUsername(), user.getPassword());
+        String token = jwtTokenService.createToken(authentication.toString(),Long.parseLong(emailTokenExpire));
+        EmailConfirmationTokenEntity emailConfirmationToken = sendEmail(user, token);
+
+        //save email
+        emailService.save(emailConfirmationToken);
     }
 
     private EmailConfirmationTokenEntity sendEmail(UserEntity user, String token) {
@@ -73,12 +80,12 @@ public class UserService implements UserDetailsService {
         simpleMailMessage.setTo(user.getUsername());
         simpleMailMessage.setSubject("Complete Registration!");
         simpleMailMessage.setText("To confirm account, please click here : "
-        +"http://localhost:8085/confirm-account?token="+ token);
+        +"http://localhost:8085/email/verification?token="+ token);
 
         EmailConfirmationTokenEntity emailConfirmationToken = new EmailConfirmationTokenEntity()
-                .setEmailConfirmationToken(token)
-                .setEmailConfirmationTokenGeneratedAt(LocalDateTime.now())
-                .setEmailConfirmationExpire(LocalDateTime.now().plusHours(Long.parseLong(hours)));
+                .setToken(token)
+                .setUser(user);
+
         emailService.sendEmail(simpleMailMessage);
         return emailConfirmationToken;
     }
@@ -92,6 +99,11 @@ public class UserService implements UserDetailsService {
 
     }
 
+    public UserEntity findActiveUserByUsername(String username){
+        UserEntity user = userRepository.findActiveUserByUsername(username)
+                .orElseThrow(()-> new UsernameNotFoundException("User not exist in the system"));
+        return user;
+    }
 
 
 }

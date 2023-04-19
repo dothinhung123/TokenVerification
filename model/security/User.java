@@ -1,4 +1,4 @@
-package com.go.tokenverification.configure;
+package com.go.tokenverification.model.security;
 
 import com.go.tokenverification.entity.UserEntity;
 import org.springframework.security.core.GrantedAuthority;
@@ -8,22 +8,17 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.util.Collection;
 import java.util.stream.Collectors;
 
+public class User implements UserDetails {
+    private final UserEntity user;
 
-public class CustomUserDetails implements UserDetails {
-
-   private final UserEntity user;
-
-    public CustomUserDetails(UserEntity user) {
+    public User(UserEntity user) {
         this.user = user;
     }
 
-
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return user
-                .getAuthorities()
-                .stream()
-                .map(authorityEntity -> new SimpleGrantedAuthority(authorityEntity.getAuthority().toString()))
+        return user.getAuthorities().stream()
+                .map(a->new SimpleGrantedAuthority(a.getAuthority()))
                 .collect(Collectors.toList());
     }
 
@@ -34,7 +29,7 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public String getUsername() {
-        return user.getUsername();
+        return user.getPassword();
     }
 
     @Override
@@ -58,6 +53,6 @@ public class CustomUserDetails implements UserDetails {
     }
 
     public final UserEntity getUser(){
-        return this.user;
+        return user;
     }
 }

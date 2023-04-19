@@ -7,7 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -21,47 +21,36 @@ import java.security.SecureRandom;
 @Configuration
 public class SecurityConfig {
 
-    @Autowired
-    private AuthenticationProviderService authenticationProviderService;
+    private final AuthenticationProviderService authenticationProviderService;
 
-    @Autowired
-    private AuthenticationFilter authenticationFilter;
+    private final AuthenticationFilter authenticationFilter;
 
-    @Autowired
-    private JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
-    @Bean
-    public BCryptPasswordEncoder bCryptPasswordEncoder() {
-
-        int strength = 10; // work factor of bcrypt
-        BCryptPasswordEncoder bCryptPasswordEncoder =
-                new BCryptPasswordEncoder(strength, new SecureRandom());
-        return bCryptPasswordEncoder;
-    }
-
-    @Bean
-    public SCryptPasswordEncoder sCryptPasswordEncoder() {
-        return new SCryptPasswordEncoder();
+    public SecurityConfig(AuthenticationProviderService authenticationProviderService, AuthenticationFilter authenticationFilter, JwtAuthenticationFilter jwtAuthenticationFilter) {
+        this.authenticationProviderService = authenticationProviderService;
+        this.authenticationFilter = authenticationFilter;
+        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
     }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
         httpSecurity.csrf().disable();
         httpSecurity.authorizeRequests()
-                .mvcMatchers("/login","singUp")
+                .mvcMatchers("/login","/singUp")
                 .permitAll();
-        httpSecurity.authenticationProvider(authenticationProviderService);
-
-
-        httpSecurity.addFilterAt(authenticationFilter, UsernamePasswordAuthenticationFilter.class);
-        httpSecurity.addFilterAfter(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+        httpSecurity.addFilterBefore(authenticationFilter, UsernamePasswordAuthenticationFilter.class);
+        httpSecurity.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return httpSecurity.build();
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
-        return authConfig.getAuthenticationManager();
+    public AuthenticationManager authenticationManager(HttpSecurity httpSecurity) throws Exception {
+        AuthenticationManagerBuilder authenticationManagerBuilder =
+                httpSecurity.getSharedObject(AuthenticationManagerBuilder.class);
+        authenticationManagerBuilder.authenticationProvider(authenticationProviderService);
+        return authenticationManagerBuilder.build();
     }
 
 

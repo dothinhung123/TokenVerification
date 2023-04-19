@@ -13,16 +13,17 @@ import java.text.ParseException;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
+import java.time.temporal.ChronoUnit;
 
 @Slf4j
 @Component
-public class JwtTokenHelper {
+public class JwtTokenService {
 
     private JWSSigner jwsSigner;
 
     private JWSVerifier jwsVerifier;
 
-    public JwtTokenHelper() throws JOSEException {
+    public JwtTokenService() throws JOSEException {
         initialize();
     }
     public void initialize() throws JOSEException {
@@ -50,7 +51,20 @@ public class JwtTokenHelper {
 
     }
 
-    public String getPayload(String token) throws ParseException, JOSEException, JwtExpiredException {
+    public String getPayloadToken(String token, long tokenExpireTime) throws ParseException, JOSEException, JwtExpiredException {
+        JWTClaimsSet jwtClaimsSet = getJwtClaimsSet(token);
+        if(jwtClaimsSet.getExpirationTime()==null){
+            log.error("No expiration time on SignedJWT claimset {}", jwtClaimsSet);
+            throw new JOSEException("No expiration time on SignedJWT claimset");
+        }
+        if(!isTokenExpire(jwtClaimsSet, tokenExpireTime)){
+            throw new JwtExpiredException("JWT time expired", jwtClaimsSet.getSubject());
+        }
+
+        return  jwtClaimsSet.getSubject();
+    }
+
+    public JWTClaimsSet getJwtClaimsSet(String token) throws ParseException, JOSEException {
         SignedJWT signedJWT = SignedJWT.parse(token);
 
         if(!signedJWT.verify(jwsVerifier)){
@@ -59,18 +73,13 @@ public class JwtTokenHelper {
         }
 
         JWTClaimsSet jwtClaimsSet = signedJWT.getJWTClaimsSet();
-        if(jwtClaimsSet.getExpirationTime()==null){
-            log.error("No expiration time on SignedJWT claimset {}", jwtClaimsSet);
-            throw new JOSEException("No expiration time on SignedJWT claimset");
-        }
+        return jwtClaimsSet;
+    }
 
+    public boolean isTokenExpire(JWTClaimsSet jwtClaimsSet, long tokenExpireTime) throws JwtExpiredException {
         ZonedDateTime jwtExpirationTime = ZonedDateTime.ofInstant(jwtClaimsSet.getExpirationTime().toInstant(), ZoneOffset.UTC);
-		ZonedDateTime currentTime = LocalDateTime.now().atZone(ZoneOffset.UTC);
+        ZonedDateTime currentTime = ZonedDateTime.now();
 
-//		if(jwtExpirationTime.isBefore(currentTime.minus(5, ChronoUnit.MINUTES))) { // 2 mins time sync grace period
-//			throw new JwtExpiredException("JWT time expired", jwtClaimsSet.getSubject(), jwtExpirationTime);
-//		}
-
-        return  jwtClaimsSet.getSubject();
+        return jwtExpirationTime.isAfter(currentTime.minus(tokenExpireTime, ChronoUnit.MINUTES));
     }
 }

@@ -4,22 +4,24 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import javax.persistence.Column;
-import javax.persistence.Embeddable;
-import java.time.LocalDateTime;
+import javax.persistence.*;
 
 @Embeddable
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+@Entity
+@Table(name = "PASSWORD_REMINDER_TOKEN")
 public class PasswordReminderTokenEntity {
-    @Column(name = "PASSWORD_REMINDER_TOKEN")
-    private String passwordReminderToken;
+    @Id
+    @GeneratedValue
+    @Column(name = "PASSWORD_REMINDER_TOKEN_ID")
+    private Long id;
 
-    @Column(name = "PASSWORD_REMINDER_TOKEN_GENERATION_TIME")
-    private LocalDateTime passwordReminderTokenGeneratedAt;
+    @Column(name = "TOKEN", columnDefinition = "TEXT")
+    private String token;
 
-    @Column(name="PASSWORD_REMINDER_EXPIRE")
-    private int passwordReminderExpire;
-
+    @ManyToOne
+    @JoinColumn(name = "USER_ID",nullable = false)
+    private UserEntity user;
 }

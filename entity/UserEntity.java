@@ -26,6 +26,9 @@ public class UserEntity {
     @Column(name="PASSWORD")
     private String password;
 
+    /*
+    Algorithm used for encrypt user password
+     */
     @Column(name = "PASSWORD_HASH_ALGORITHM")
     @Enumerated(EnumType.STRING)
     private EncryptionAlgorithm encryptionAlgorithm;
@@ -33,16 +36,22 @@ public class UserEntity {
     /*
     This part is token for sending email
      */
-    @Embedded
-    private EmailConfirmationTokenEntity emailConfirmationTokenEntity;
+    @OneToMany(mappedBy = "user")
+    private List<EmailConfirmationTokenEntity> emailConfirmationTokens;
 
     /*
     This part is token for password reminder
      */
-    @Embedded
-    private PasswordReminderTokenEntity passwordReminderTokenEntity;
-
     @OneToMany(mappedBy = "user")
+    private List<PasswordReminderTokenEntity> passwordReminderTokens;
+
+    /*
+    This check whether user is active or not
+     */
+    @Column(name = "IS_ACTIVE")
+    private boolean isActive ;
+
+    @OneToMany(fetch = FetchType.EAGER, mappedBy = "user", cascade = CascadeType.ALL)
     private List<AuthorityEntity> authorities;
 
 }
