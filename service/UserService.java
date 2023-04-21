@@ -10,11 +10,8 @@ import com.go.tokenverification.repository.UserRepository;
 import com.go.tokenverification.utils.EmailValidationUtils;
 import com.nimbusds.jose.JOSEException;
 import org.apache.logging.log4j.util.Strings;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -40,7 +37,6 @@ public class UserService implements UserDetailsService {
     public UserService(UserRepository userRepository, EmailService emailService, EmailConfirmationTokenRepository emailConfirmationTokenRepository, BCryptPasswordEncoder bCryptPasswordEncoder, JwtTokenService jwtTokenService) {
         this.userRepository = userRepository;
         this.emailService = emailService;
-//        this.emailConfirmationTokenRepository = emailConfirmationTokenRepository;
         this.bCryptPasswordEncoder = bCryptPasswordEncoder;
         this.jwtTokenService = jwtTokenService;
     }
@@ -67,27 +63,29 @@ public class UserService implements UserDetailsService {
         userRepository.save(user);
 
         //send email
-        Authentication authentication = new UsernamePasswordAuthenticationToken(user.getUsername(), user.getPassword());
-        String token = jwtTokenService.createToken(authentication.toString(),Long.parseLong(emailTokenExpire));
-        EmailConfirmationTokenEntity emailConfirmationToken = sendEmail(user, token);
-
-        //save email
-        emailService.save(emailConfirmationToken);
+        sendEmail(user);
     }
 
-    private EmailConfirmationTokenEntity sendEmail(UserEntity user, String token) {
+    public void sendEmail(UserEntity user) throws JOSEException {
+        //create token
+        String token = jwtTokenService.createToken(user.toString(),Long.parseLong(emailTokenExpire));
+
+        //prepare email script
         SimpleMailMessage simpleMailMessage = new SimpleMailMessage();
         simpleMailMessage.setTo(user.getUsername());
         simpleMailMessage.setSubject("Complete Registration!");
         simpleMailMessage.setText("To confirm account, please click here : "
-        +"http://localhost:8085/email/verification?token="+ token);
+                +"http://localhost:8085/email/verification?token="+ token);
 
         EmailConfirmationTokenEntity emailConfirmationToken = new EmailConfirmationTokenEntity()
                 .setToken(token)
                 .setUser(user);
 
+        //send email
         emailService.sendEmail(simpleMailMessage);
-        return emailConfirmationToken;
+
+        //save email
+        emailService.save(emailConfirmationToken);
     }
 
     public boolean isUserExist(UserEntity user) throws InvalidDataException {
@@ -101,6 +99,11 @@ public class UserService implements UserDetailsService {
 
     public UserEntity findActiveUserByUsername(String username){
         UserEntity user = userRepository.findActiveUserByUsername(username)
+                .orElseThrow(()-> new UsernameNotFoundException("User not exist in the system"));
+        return user;
+    }
+    public UserEntity findInActiveUserByUsername(String username){
+        UserEntity user = userRepository.findInactiveUserByUsername(username)
                 .orElseThrow(()-> new UsernameNotFoundException("User not exist in the system"));
         return user;
     }

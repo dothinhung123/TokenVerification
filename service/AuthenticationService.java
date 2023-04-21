@@ -12,7 +12,7 @@ import org.springframework.security.crypto.scrypt.SCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
-public class AuthenticationProviderService implements AuthenticationProvider {
+public class AuthenticationService implements AuthenticationProvider {
 
     private final UserService userService;
 
@@ -20,7 +20,7 @@ public class AuthenticationProviderService implements AuthenticationProvider {
 
     private final SCryptPasswordEncoder sCryptPasswordEncoder;
 
-    public AuthenticationProviderService(UserService userService, BCryptPasswordEncoder bCryptPasswordEncoder, SCryptPasswordEncoder sCryptPasswordEncoder) {
+    public AuthenticationService(UserService userService, BCryptPasswordEncoder bCryptPasswordEncoder, SCryptPasswordEncoder sCryptPasswordEncoder) {
         this.userService = userService;
         this.bCryptPasswordEncoder = bCryptPasswordEncoder;
         this.sCryptPasswordEncoder = sCryptPasswordEncoder;

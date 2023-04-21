@@ -34,8 +34,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     public static final RequestMatcher REQUESTMATCHER = new NegatedRequestMatcher(new OrRequestMatcher(Arrays.asList(
             new AntPathRequestMatcher("/login"),
-            new AntPathRequestMatcher("/signUp"),
-            new AntPathRequestMatcher("/email/verification"))));
+            new AntPathRequestMatcher("/signup"),
+            new AntPathRequestMatcher("/email/verification"),
+            new AntPathRequestMatcher("/send/email")))
+    );
 
 
     private final JwtTokenService jwtTokenService;
