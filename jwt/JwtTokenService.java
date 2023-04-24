@@ -13,6 +13,7 @@ import java.text.ParseException;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
+import java.time.temporal.ChronoField;
 import java.time.temporal.ChronoUnit;
 
 @Slf4j
@@ -32,7 +33,7 @@ public class JwtTokenService {
     }
     public String createToken(String payload , long expireTime) throws JOSEException {
 
-        ZonedDateTime zdt = ZonedDateTime.now();
+        ZonedDateTime zdt = LocalDateTime.now().atZone(ZoneOffset.UTC);
 
         //prepare JWT with claim set
         JWTClaimsSet jwtClaimsSet = new JWTClaimsSet.Builder()
@@ -78,8 +79,8 @@ public class JwtTokenService {
 
     public boolean isTokenExpire(JWTClaimsSet jwtClaimsSet, long tokenExpireTime) throws JwtExpiredException {
         ZonedDateTime jwtExpirationTime = ZonedDateTime.ofInstant(jwtClaimsSet.getExpirationTime().toInstant(), ZoneOffset.UTC);
-        ZonedDateTime currentTime = ZonedDateTime.now();
+		ZonedDateTime currentTime = LocalDateTime.now().atZone(ZoneOffset.UTC);
 
-        return jwtExpirationTime.isAfter(currentTime.minus(tokenExpireTime, ChronoUnit.MINUTES));
+        return currentTime.isBefore(jwtExpirationTime);
     }
 }

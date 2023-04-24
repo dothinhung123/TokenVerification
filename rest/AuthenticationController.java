@@ -7,11 +7,14 @@ import com.go.tokenverification.jwt.JwtExpiredException;
 import com.go.tokenverification.service.EmailService;
 import com.go.tokenverification.service.UserService;
 import com.nimbusds.jose.JOSEException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.text.ParseException;
 
 @RestController
+@RequestMapping("/api/v1.0/auth")
 public class AuthenticationController {
 
     private final UserService userService;
@@ -28,14 +31,15 @@ public class AuthenticationController {
         userService.addUser(user);
     }
 
-    @PostMapping("/login")
+    @PostMapping({"/login","/refresh"})
     public String login(){
         return "Login Successfully";
     }
 
     @GetMapping("/email/verification")
-    public void String(@RequestParam String token) throws EmailConfirmationTokenNotFoundException, JwtExpiredException, ParseException, JOSEException {
+    public ResponseEntity<Void> String(@RequestParam String token) throws EmailConfirmationTokenNotFoundException, JwtExpiredException, ParseException, JOSEException {
          emailService.verifyEmailConfirmation(token);
+         return new ResponseEntity<Void>(HttpStatus.OK);
     }
 
     @GetMapping("/send/email")

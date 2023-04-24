@@ -32,20 +32,18 @@ import java.util.Arrays;
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    public static final RequestMatcher REQUESTMATCHER = new NegatedRequestMatcher(new OrRequestMatcher(Arrays.asList(
+    public static final RequestMatcher REQUESTMATCHER = new OrRequestMatcher(Arrays.asList(
             new AntPathRequestMatcher("/login"),
             new AntPathRequestMatcher("/signup"),
             new AntPathRequestMatcher("/email/verification"),
-            new AntPathRequestMatcher("/send/email")))
+            new AntPathRequestMatcher("/send/email"),
+            new AntPathRequestMatcher("/error/**"))
     );
 
 
     private final JwtTokenService jwtTokenService;
 
     private final UserService userService;
-
-    @Autowired
-    private AuthenticationManager authenticationManager;
 
     @Value("${token.expire.minutes}")
     private String tokenExpireTime;
@@ -73,7 +71,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         } catch (JOSEException e) {
             throw new RuntimeException(e);
         } catch (JwtExpiredException e) {
-            throw new RuntimeException(e);
+            SecurityContextHolder.clearContext();
         }
         filterChain.doFilter(request, response);
 
@@ -82,7 +80,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
-        //we will not using JwtAuthenticationFilter for path /login and /signUp
-        return !REQUESTMATCHER.matches(request);
+
+        return REQUESTMATCHER.matches(request);
     }
 }

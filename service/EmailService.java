@@ -15,6 +15,7 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.text.ParseException;
 
@@ -43,6 +44,7 @@ public class EmailService {
         javaMailSender.send(email);
     }
 
+    @Transactional
     public void verifyEmailConfirmation(String token) throws EmailConfirmationTokenNotFoundException, ParseException, JOSEException, JwtExpiredException {
         //find token
         EmailConfirmationTokenEntity emailConfirmationTokenEntity = emailConfirmationTokenRepository.findByToken(token)
@@ -50,16 +52,15 @@ public class EmailService {
 
         //check expire time
         JWTClaimsSet claimsSet = jwtTokenService.getJwtClaimsSet(token);
-        if(jwtTokenService.isTokenExpire(claimsSet,Long.parseLong(emailTokenExpireMinutes))){
+        if(!jwtTokenService.isTokenExpire(claimsSet,Long.parseLong(emailTokenExpireMinutes))){
            throw new JwtExpiredException("Token is expired", claimsSet.getSubject());
         }
 
         // active user
         UserEntity user = userRepository.findInactiveUserByUsername(emailConfirmationTokenEntity.getUser().getUsername())
                 .orElseThrow(()-> new UsernameNotFoundException("Username not found"));
-        user.setActive(Boolean.TRUE);
 
-        userRepository.save(user);
+        userRepository.activeUserByUsername(user.getUsername());
 
     }
     public void save(EmailConfirmationTokenEntity emailConfirmationToken){

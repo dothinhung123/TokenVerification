@@ -51,7 +51,7 @@ public class UserEntity {
     @Column(name = "IS_ACTIVE")
     private boolean isActive ;
 
-    @OneToMany(fetch = FetchType.EAGER, mappedBy = "user", cascade = CascadeType.ALL)
+    @OneToMany(fetch = FetchType.EAGER, mappedBy = "user")
     private List<AuthorityEntity> authorities;
 
 }
