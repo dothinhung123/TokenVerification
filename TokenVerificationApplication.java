@@ -9,7 +9,6 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 @EnableAsync
 @EnableTransactionManagement
 public class TokenVerificationApplication {
-
     public static void main(String[] args) {
         SpringApplication.run(TokenVerificationApplication.class, args);
     }

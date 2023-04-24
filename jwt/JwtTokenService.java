@@ -33,6 +33,7 @@ public class JwtTokenService {
     }
     public String createToken(String payload , long expireTime) throws JOSEException {
 
+        log.debug("START, createToken with payload ={} and expireTime ={}", payload, expireTime);
         ZonedDateTime zdt = LocalDateTime.now().atZone(ZoneOffset.UTC);
 
         //prepare JWT with claim set
@@ -48,6 +49,7 @@ public class JwtTokenService {
         //apply HMAC protection. JWT signing
         signedJWT.sign(jwsSigner);
 
+        log.debug("END, createToken with payload ={} and expireTime ={}", payload, expireTime);
         return signedJWT.serialize();
 
     }
@@ -80,7 +82,7 @@ public class JwtTokenService {
     public boolean isTokenExpire(JWTClaimsSet jwtClaimsSet, long tokenExpireTime) throws JwtExpiredException {
         ZonedDateTime jwtExpirationTime = ZonedDateTime.ofInstant(jwtClaimsSet.getExpirationTime().toInstant(), ZoneOffset.UTC);
 		ZonedDateTime currentTime = LocalDateTime.now().atZone(ZoneOffset.UTC);
-
+        log.info("isTokenExpire = {}", currentTime.isBefore(jwtExpirationTime));
         return currentTime.isBefore(jwtExpirationTime);
     }
 }

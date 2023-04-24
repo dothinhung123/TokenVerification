@@ -1,5 +1,6 @@
 package com.go.tokenverification.rest;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.go.tokenverification.entity.UserEntity;
 import com.go.tokenverification.exception.EmailConfirmationTokenNotFoundException;
 import com.go.tokenverification.exception.InvalidDataException;
@@ -7,6 +8,7 @@ import com.go.tokenverification.jwt.JwtExpiredException;
 import com.go.tokenverification.service.EmailService;
 import com.go.tokenverification.service.UserService;
 import com.nimbusds.jose.JOSEException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import java.text.ParseException;
 
 @RestController
+@Slf4j
 @RequestMapping("/api/v1.0/auth")
 public class AuthenticationController {
 
@@ -27,8 +30,10 @@ public class AuthenticationController {
     }
 
     @PostMapping("/signup")
-    public void signUp(@RequestBody UserEntity user) throws InvalidDataException, JOSEException {
+    public void signUp(@RequestBody UserEntity user) throws InvalidDataException, JOSEException, JsonProcessingException {
+        log.info("START, signUp with user " + user.getUsername());
         userService.addUser(user);
+        log.info("END, SUCCESSFUL signUp with user " + user.getUsername());
     }
 
     @PostMapping({"/login","/refresh"})
@@ -44,6 +49,7 @@ public class AuthenticationController {
 
     @GetMapping("/send/email")
     public void sendEmail(@RequestParam("email") String email) throws JOSEException {
+
         UserEntity user = userService.findInActiveUserByUsername(email);
         userService.sendEmail(user);
     }

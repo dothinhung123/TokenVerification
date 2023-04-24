@@ -1,5 +1,7 @@
 package com.go.tokenverification.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.go.tokenverification.entity.EmailConfirmationTokenEntity;
 import com.go.tokenverification.entity.UserEntity;
 import com.go.tokenverification.exception.InvalidDataException;
@@ -9,6 +11,7 @@ import com.go.tokenverification.repository.EmailConfirmationTokenRepository;
 import com.go.tokenverification.repository.UserRepository;
 import com.go.tokenverification.utils.EmailValidationUtils;
 import com.nimbusds.jose.JOSEException;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.logging.log4j.util.Strings;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
@@ -20,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional
+@Slf4j
 public class UserService implements UserDetailsService {
 
     private final UserRepository userRepository;
@@ -44,29 +48,35 @@ public class UserService implements UserDetailsService {
     @Override
     public User loadUserByUsername(String username) throws UsernameNotFoundException {
         UserEntity user = findActiveUserByUsername(username);
+        log.info("FOUND, User with username =  {}", username);
         return new User(user);
     }
 
-    public void addUser(UserEntity user) throws InvalidDataException, JOSEException {
+    public void addUser(UserEntity user) throws InvalidDataException, JOSEException, JsonProcessingException {
         //verify email
         if(user==null || Strings.isEmpty(user.getUsername()) || Strings.isEmpty(user.getPassword())
         || !EmailValidationUtils.validateEmail(user.getUsername())){
+            log.error("User information is not valid {}", new ObjectMapper().writeValueAsString(user));
             throw new InvalidDataException("User is invalid");
         }
 
         if(isUserExist(user)){
+            log.error("User with username = {} have already exist", user.getUsername());
             throw new InvalidDataException("User have already existed");
         }
 
+        log.info("START add addUser with username = {}", user.getUsername());
         //save user
         user.setPassword(bCryptPasswordEncoder.encode(user.getPassword()));
         userRepository.save(user);
 
         //send email
         sendEmail(user);
+        log.info("END add successfully addUser with username = {}", user.getUsername());
     }
 
     public void sendEmail(UserEntity user) throws JOSEException {
+        log.info("START, sendEmail with username = {} ", user.getUsername());
         //create token
         String token = jwtTokenService.createToken(user.toString(),Long.parseLong(emailTokenExpire));
 
@@ -86,10 +96,12 @@ public class UserService implements UserDetailsService {
 
         //save email
         emailService.save(emailConfirmationToken);
+        log.info("END, sendEmail with username = {} ", user.getUsername());
     }
 
     public boolean isUserExist(UserEntity user) throws InvalidDataException {
         if(user!= null && Strings.isEmpty(user.getUsername())){
+            log.error("Username is invalid");
             throw new InvalidDataException("Username is empty or null");
         }
         return userRepository.findUserEntityByUsername(user.getUsername())

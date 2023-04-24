@@ -1,6 +1,7 @@
 package com.go.tokenverification.service;
 
 import com.go.tokenverification.model.security.User;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -12,6 +13,7 @@ import org.springframework.security.crypto.scrypt.SCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
+@Slf4j
 public class AuthenticationService implements AuthenticationProvider {
 
     private final UserService userService;
@@ -28,9 +30,11 @@ public class AuthenticationService implements AuthenticationProvider {
 
     @Override
     public Authentication authenticate(Authentication authentication) throws AuthenticationException {
+
         String username = authentication.getName();
         String password = authentication.getCredentials().toString();
 
+        log.info("Authenticate with username = {} ", username);
         User user = userService.loadUserByUsername(username);
         switch (user.getUser().getEncryptionAlgorithm()){
             case BCRYPT:
@@ -38,14 +42,17 @@ public class AuthenticationService implements AuthenticationProvider {
 
             case SCRYPT:
                 return checkPassword(user, password, sCryptPasswordEncoder);
+
         }
         throw new BadCredentialsException("Bad credentials ");
     }
 
     private Authentication checkPassword(User user , String rawPassword , PasswordEncoder passwordEncoder){
         if (passwordEncoder.matches(rawPassword, user.getPassword())) {
+            log.info("password is correct");
             return new UsernamePasswordAuthenticationToken(user.getUsername(), user.getPassword(), user.getAuthorities());
         } else {
+            log.error("Password is incorrect");
             throw new BadCredentialsException("Bad credentials");
         }
     }

@@ -9,6 +9,7 @@ import com.go.tokenverification.repository.EmailConfirmationTokenRepository;
 import com.go.tokenverification.repository.UserRepository;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jwt.JWTClaimsSet;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -20,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.text.ParseException;
 
 @Service
+@Slf4j
 public class EmailService {
 
     private final JavaMailSender javaMailSender;
@@ -46,6 +48,7 @@ public class EmailService {
 
     @Transactional
     public void verifyEmailConfirmation(String token) throws EmailConfirmationTokenNotFoundException, ParseException, JOSEException, JwtExpiredException {
+       log.debug("START,verifyEmailConfirmation with token = {}", token);
         //find token
         EmailConfirmationTokenEntity emailConfirmationTokenEntity = emailConfirmationTokenRepository.findByToken(token)
                 .orElseThrow(()-> new EmailConfirmationTokenNotFoundException("Token is not existed", token));
@@ -61,6 +64,7 @@ public class EmailService {
                 .orElseThrow(()-> new UsernameNotFoundException("Username not found"));
 
         userRepository.activeUserByUsername(user.getUsername());
+        log.debug("END, verifyEmailConfirmation with token ={}",token);
 
     }
     public void save(EmailConfirmationTokenEntity emailConfirmationToken){
