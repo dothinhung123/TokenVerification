@@ -2,6 +2,8 @@
 **Token-based Authentication with JWT, Spring, Java 11**
 ## Table of contents
 * [General info](#general-info)
+* [Database Structure](#database-structure)
+* [Usecases](#usecases)
 * [Technologies](#technologies)
 * [Setup](#setup)
 * [Notes](#notes)
